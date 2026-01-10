@@ -6,13 +6,15 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "build": "npm run build:client && prisma generate && prisma db push",
+    "build": "npm run build:client && prisma generate",
     "build:client": "cd client && npm install && npm run build",
     "install:all": "npm install && cd client && npm install",
     "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
+    "vercel-build": "prisma generate && prisma db push && npm run build:client",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
