@@ -14,7 +14,6 @@
     "db:migrate:dev": "prisma migrate dev",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "vercel-build": "echo '🔨 Building project...' && prisma generate && prisma db push && cd client && npm install && npm run build && cd .. && echo '✅ Build complete'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
