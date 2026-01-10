@@ -6,7 +6,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
-import OpenAI, { toFile } from "openai";
+// import OpenAI, { toFile } from "openai"; // Ya no necesitamos OpenAI
+import { uploadImageToS3, getSignedImageUrl } from './services/s3Service.js';
+import { generateGraduationImage } from './services/geminiService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,11 +18,16 @@ const prisma = new PrismaClient();
 const app = express();
 const port = 3001;
 
+// Configurar multer para almacenamiento temporal antes de subir a S3
 const upload = multer({ dest: 'uploads/' });
+
 app.use(cors());
 app.use(express.json());
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Servir archivos estáticos del build de React
+app.use(express.static(path.join(__dirname, 'client/build')));
+
+// const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY }); // Ya no se usa
 
 
 
@@ -333,29 +340,29 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
       prompt: prompt,
     });
 
+
     const image_base64 = result.data[0].b64_json;
     const outputBuffer = Buffer.from(image_base64, 'base64');
     const outputFilename = `generated_${Date.now()}.png`;
-    const outputPath = path.join('generated', outputFilename);
 
-    // Ensure the generated directory exists
-    if (!fs.existsSync('generated')) {
-      fs.mkdirSync('generated');
-    }
-
-    fs.writeFileSync(outputPath, outputBuffer);
+    // Subir a S3
+    const s3Key = await uploadImageToS3(outputBuffer, outputFilename);
 
     const savedUser = await prisma.user.create({
       data: {
-        id: cedula || `temp_${Date.now()}`, // Usar cédula o ID temporal
+        id: cedula || `temp_${Date.now()}`,
         name,
         gender,
         career,
-        image: outputBuffer,
+        image: s3Key, // Guardar Key de S3
       },
     });
 
-    res.json({ success: true, imagePath: outputPath, user: savedUser });
+    const signedUrl = await getSignedImageUrl(s3Key);
+    res.json({ success: true, imagePath: s3Key, user: savedUser, image: signedUrl });
+
+    // Limpiar archivo temporal de upload
+    fs.unlinkSync(imagePath);
 
   } catch (error) {
     console.error(error);
@@ -380,59 +387,25 @@ app.post('/api/photo/:cedula', upload.single('image'), async (req, res) => {
       });
     }
 
-    // Si el usuario ya tiene foto, retornarla
+
+    // Si el usuario ya tiene foto (Nombre de archivo en S3), generar URL firmada
     if (user.image) {
-      console.log(`Usuario ${user.name} ya tiene foto, retornando imagen existente`);
+      console.log(`Usuario ${user.name} ya tiene foto, generando URL firmada`);
       
-      try {
-        // Asegurarse de que user.image es un Buffer válido
-        let imageBuffer;
-        if (Buffer.isBuffer(user.image)) {
-          imageBuffer = user.image;
-        } else if (Array.isArray(user.image)) {
-          // Si es un array de bytes, convertirlo a Buffer
-          imageBuffer = Buffer.from(user.image);
-        } else if (user.image instanceof Uint8Array) {
-          // Si es un Uint8Array (común con Prisma), convertirlo a Buffer
-          imageBuffer = Buffer.from(user.image);
-        } else if (typeof user.image === 'object' && user.image.data) {
-          // Si es un objeto con propiedad 'data' (otro formato de Prisma)
-          imageBuffer = Buffer.from(user.image.data);
-        } else if (typeof user.image === 'string') {
-          // Si ya es una string base64, usarla directamente
-          imageBuffer = Buffer.from(user.image, 'base64');
-        } else {
-          // Último recurso: intentar convertir a Buffer usando Object.values
-          const values = Object.values(user.image);
-          imageBuffer = Buffer.from(values);
-        }
-        
-        // Convertir el buffer a base64
-        const imageBase64 = imageBuffer.toString('base64');
-        
-        console.log('✓ Imagen convertida exitosamente');
-        console.log('Base64 length:', imageBase64.length);
-        console.log('Base64 preview:', imageBase64.substring(0, 50) + '...');
-        
-        return res.json({
-          success: true,
-          hasExistingPhoto: true,
-          user: {
-            id: user.id,
-            name: user.name,
-            gender: user.gender,
-            career: user.career
-          },
-          hasPhoto: true,
-          image: `data:image/png;base64,${imageBase64}`
-        });
-      } catch (conversionError) {
-        console.error('Error converting image to base64:', conversionError);
-        return res.status(500).json({
-          success: false,
-          error: 'Error al procesar la imagen almacenada'
-        });
-      }
+      const signedUrl = await getSignedImageUrl(user.image);
+
+      return res.json({
+        success: true,
+        hasExistingPhoto: true,
+        user: {
+          id: user.id,
+          name: user.name,
+          gender: user.gender,
+          career: user.career
+        },
+        hasPhoto: true,
+        image: signedUrl // Retornar URL firmada temporal
+      });
     }
 
     // Si no tiene foto, verificar si se envió una imagen para generar
@@ -443,78 +416,57 @@ app.post('/api/photo/:cedula', upload.single('image'), async (req, res) => {
       });
     }
 
-    console.log(`Usuario ${user.name} no tiene foto, generando nueva imagen...`);
+    console.log(`Usuario ${user.name} no tiene foto, generando nueva imagen con Gemini...`);
 
-    // Generar nueva foto usando los datos del usuario
+    // Generar nueva foto usando los datos del usuario y Gemini
     const imagePath = req.file.path;
-    const logopath = path.join(__dirname, 'assets','logo.png');
+    const backgroundPath = path.join(__dirname, 'assets', 'background.png');
+    const diplomaPath = path.join(__dirname, 'assets', 'diploma.jpeg');
 
-    const prompt = user.gender === 'female'
-      ? `
-        Edit the image, based on the reference. The image is of me in the picture smiling while holding my graduation diploma with the logo that i provide to you and the name ${user.name}, additionally two signatures in the bottom right corner and left corner. I am standing in a well-kept garden in front of a circular water fountain. Behind me is a modern multi-story building with large windows, likely a university campus. I am 5 years older dressed elegantly in a formal dress with subtle details, looking professional and confident for my graduation ceremony.
+    // Llamar al servicio de Gemini
+    const outputBuffer = await generateGraduationImage(
+      imagePath, 
+      backgroundPath,
+      diplomaPath,
+      user.gender, 
+      user.name, 
+      user.career
+    );
 
-        The diploma I am holding shows that I graduated as a ${user.career} from the Escuela Colombiana de Ingeniería Julio Garavito in Colombia. My name, visible on the diploma, is ${user.name}.
-
-        In the background, there are flowering bushes, which, together with the modern building, create a solemn and pleasant atmosphere—perfect for a graduation ceremony. My posture, elegant attire, and the way I proudly hold the diploma reflect my happiness and pride in this academic achievement.`
-
-      : `
-        Edit the image, based on the reference. The image is of me in the picture smiling while holding my graduation diploma with the logo that i provide to you and the name ${user.name}, additionally two signatures in the bottom right corner and left corner. I am standing in a well-kept garden in front of a circular water fountain. Behind me is a modern multi-story building with large windows, likely a university campus. I am 5 years older dressed formally in a white dress shirt with small dark dots, a blue tie with white dots, a dark blue suit jacket, and matching pants.
-
-        The diploma I am holding shows that I graduated as a ${user.career} from the Escuela Colombiana de Ingeniería Julio Garavito in Colombia. My name, visible on the diploma, is ${user.name}.
-
-        In the background, there are flowering bushes, which, together with the modern building, create a solemn and pleasant atmosphere—perfect for a graduation ceremony. My posture, formal attire, and the way he proudly holds the diploma reflect my happiness and pride in this academic achievement.`;
-
-    const imageUser = await toFile(fs.createReadStream(imagePath), null, {
-      type: "image/png",
-    });
-
-    const imageLogo = await toFile(fs.createReadStream(logopath), null, {
-        type: "image/png"
-    });
-
-    const result = await openai.images.edit({
-      model: "gpt-image-1",
-      image: [imageUser, imageLogo],
-      prompt: prompt,
-    });
-
-    const image_base64 = result.data[0].b64_json;
-    const outputBuffer = Buffer.from(image_base64, 'base64');
     const outputFilename = `${user.name.replace(/\s+/g, '_')}_graduado_${Date.now()}.png`;
-    const outputPath = path.join('generated', outputFilename);
 
-    // Ensure the generated directory exists
-    if (!fs.existsSync('generated')) {
-      fs.mkdirSync('generated');
-    }
+    // Subir a S3 (ahora devuelve solo el filename/key)
+    const s3Key = await uploadImageToS3(outputBuffer, outputFilename);
 
-    // Guardar archivo físico
-    fs.writeFileSync(outputPath, outputBuffer);
-
-    // Actualizar usuario en la base de datos con la nueva imagen
+    // Actualizar usuario en la base de datos con la nueva imagen (Key)
     const updatedUser = await prisma.user.update({
       where: { id: cedula },
-      data: { image: outputBuffer }
+      data: { image: s3Key }
     });
 
-    console.log(`✓ Foto generada y guardada para ${user.name}`);
+    console.log(`✓ Foto generada y guardada en S3 para ${user.name}`);
+    
+    // Generar URL firmada para mostrarla inmediatamente
+    const signedUrl = await getSignedImageUrl(s3Key);
 
     res.json({ 
       success: true, 
       hasExistingPhoto: false,
       generated: true,
-      imagePath: outputPath,
+      imagePath: s3Key,
       user: {
         id: updatedUser.id,
         name: updatedUser.name,
         gender: updatedUser.gender,
         career: updatedUser.career
       },
-      image: `data:image/png;base64,${image_base64}`
+      image: signedUrl // Retornar URL firmada
     });
 
-    // Limpiar archivo temporal
-    fs.unlinkSync(imagePath);
+    // Limpiar archivo temporal de upload
+    if (fs.existsSync(imagePath)) {
+      fs.unlinkSync(imagePath);
+    }
 
   } catch (error) {
     console.error('Error en /api/photo/:cedula:', error);
@@ -557,31 +509,10 @@ app.get('/api/check-photo/:cedula', async (req, res) => {
       hasPhoto
     };
 
-    // Si tiene foto, incluirla en la respuesta
+
+    // Si tiene foto, incluirla en la respuesta (ahora es una URL firmada)
     if (hasPhoto) {
-      try {
-        let imageBuffer;
-        if (Buffer.isBuffer(user.image)) {
-          imageBuffer = user.image;
-        } else if (Array.isArray(user.image)) {
-          imageBuffer = Buffer.from(user.image);
-        } else if (user.image instanceof Uint8Array) {
-          imageBuffer = Buffer.from(user.image);
-        } else if (typeof user.image === 'object' && user.image.data) {
-          imageBuffer = Buffer.from(user.image.data);
-        } else if (typeof user.image === 'string') {
-          imageBuffer = Buffer.from(user.image, 'base64');
-        } else {
-          const values = Object.values(user.image);
-          imageBuffer = Buffer.from(values);
-        }
-        
-        const imageBase64 = imageBuffer.toString('base64');
-        response.image = `data:image/png;base64,${imageBase64}`;
-      } catch (conversionError) {
-        console.error('Error converting image in check-photo:', conversionError);
-        response.imageError = 'Error al procesar la imagen';
-      }
+       response.image = await getSignedImageUrl(user.image);
     }
 
     res.json(response);
@@ -621,24 +552,15 @@ app.get('/api/debug-image/:cedula', async (req, res) => {
       });
     }
 
+
     // Información de diagnóstico
     const diagnosticInfo = {
       success: true,
       hasImage: true,
       user: { id: user.id, name: user.name },
       imageType: typeof user.image,
-      isBuffer: Buffer.isBuffer(user.image),
-      isArray: Array.isArray(user.image),
-      length: user.image ? user.image.length : 0
+      imageValue: user.image // Ver el valor directamente (URL)
     };
-
-    if (Array.isArray(user.image)) {
-      diagnosticInfo.arrayPreview = user.image.slice(0, 20);
-    }
-
-    if (Buffer.isBuffer(user.image)) {
-      diagnosticInfo.bufferPreview = user.image.toString('base64').substring(0, 50);
-    }
 
     res.json(diagnosticInfo);
 
@@ -648,6 +570,6 @@ app.get('/api/debug-image/:cedula', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Server running at http://0.0.0.0:${port}`);
 });

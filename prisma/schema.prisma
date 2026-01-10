@@ -12,6 +12,6 @@ model User {
   name      String
   gender    String
   career    String
-  image     Bytes?
+  image     String?   // Changed from Bytes? to String? to store the S3 URL
   createdAt DateTime @default(now())
 }
