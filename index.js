@@ -16,10 +16,12 @@ const __dirname = path.dirname(__filename);
 dotenv.config();
 const prisma = new PrismaClient();
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3001;
 
-// Configurar multer para almacenamiento temporal antes de subir a S3
-const upload = multer({ dest: 'uploads/' });
+// Configurar multer para almacenamiento temporal
+// En Vercel/serverless, solo /tmp es escribible
+const uploadDir = process.env.VERCEL ? '/tmp/uploads' : 'uploads';
+const upload = multer({ dest: uploadDir });
 
 app.use(cors());
 app.use(express.json());
