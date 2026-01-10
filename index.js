@@ -572,6 +572,11 @@ app.get('/api/debug-image/:cedula', async (req, res) => {
   }
 });
 
+// IMPORTANTE: Catch-all para servir React (debe ir al final, después de todas las rutas API)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+});
+
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running at http://0.0.0.0:${port}`);
 });
