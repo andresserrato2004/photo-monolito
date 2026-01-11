@@ -147,13 +147,23 @@ function App() {
       
       const context = canvas.getContext("2d");
       
-      // Dibujar sin NINGUNA transformación
+      // Modo espejo: invertir horizontalmente
+      // Guardar el estado actual
+      context.save();
+      // Mover el origen a la esquina derecha
+      context.translate(video.videoWidth, 0);
+      // Escalar en -1 en X para invertir (espejo)
+      context.scale(-1, 1);
+      
       context.drawImage(video, 0, 0);
+      
+      // Restaurar el estado para futuras capturas
+      context.restore();
       
       canvas.toBlob((blob) => {
         if (blob) {
           const photoUrl = URL.createObjectURL(blob);
-          console.log("Foto capturada sin modificaciones, URL:", photoUrl);
+          console.log("Foto capturada con efecto espejo, URL:", photoUrl);
           
           setCapturedPhoto(photoUrl);
           setCapturedPhotoBlob(blob);
@@ -527,7 +537,7 @@ function App() {
                 <img 
                   src={generatedImage} 
                   alt="Foto de graduación" 
-                  className="generated-image mirrored"
+                  className="generated-image"
                 />
                 <div className="image-decoration">🎓</div>
               </div>

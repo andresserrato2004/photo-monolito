@@ -206,7 +206,7 @@ body {
   border-radius: 15px;
 }
 
-/* Efecto espejo SOLO para el video en vivo */
+/* Efecto espejo para el video en vivo y la vista previa */
 .mirrored {
   transform: scaleX(-1);
 }
