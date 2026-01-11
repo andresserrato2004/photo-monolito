@@ -527,7 +527,7 @@ function App() {
                 <img 
                   src={generatedImage} 
                   alt="Foto de graduación" 
-                  className="generated-image"
+                  className="generated-image mirrored"
                 />
                 <div className="image-decoration">🎓</div>
               </div>
