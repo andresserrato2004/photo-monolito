@@ -136,7 +136,6 @@ function App() {
   };
 
   const capturePhoto = () => {
-    console.log("Capturando foto...");
     const video = videoRef.current;
     const canvas = canvasRef.current;
     
@@ -163,7 +162,6 @@ function App() {
       canvas.toBlob((blob) => {
         if (blob) {
           const photoUrl = URL.createObjectURL(blob);
-          console.log("Foto capturada con efecto espejo, URL:", photoUrl);
           
           setCapturedPhoto(photoUrl);
           setCapturedPhotoBlob(blob);
@@ -174,14 +172,12 @@ function App() {
   };
 
   const retakePhoto = () => {
-    console.log("Retomando foto...");
     setCapturedPhoto(null);
     setCapturedPhotoBlob(null);
     setStep("capture");
   };
 
   const confirmAndSend = async () => {
-    console.log("Confirmando foto...");
     if (!cedula.trim() || !userData || !capturedPhotoBlob) {
       setMessage("Error: Faltan datos para procesar");
       return;
@@ -194,7 +190,6 @@ function App() {
     formData.append("image", capturedPhotoBlob, "captured.png");
 
     try {
-      console.log(`Enviando foto para cédula: ${cedula}`);
       const response = await axios.post(`${API_URL}/api/photo/${cedula}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',

@@ -8,7 +8,7 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 // import OpenAI, { toFile } from "openai"; // Ya no necesitamos OpenAI
 import { uploadImageToS3, getSignedImageUrl } from './services/s3Service.js';
-import { generateGraduationImage } from './services/geminiService.js';
+import { generateGraduationImageFlash } from './services/geminiService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -330,7 +330,7 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
 
     const imageUSer = await toFile(fs.createReadStream(imagePath), null, {
       type: "image/png",
-    });
+    });676
 
     const imageLogo = await toFile(fs.createReadStream(logopath), null, {
         type: "image/png"
@@ -392,7 +392,6 @@ app.post('/api/photo/:cedula', upload.single('image'), async (req, res) => {
 
     // Si el usuario ya tiene foto (Nombre de archivo en S3), generar URL firmada
     if (user.image) {
-      console.log(`Usuario ${user.name} ya tiene foto, generando URL firmada`);
       
       const signedUrl = await getSignedImageUrl(user.image);
 
@@ -418,15 +417,15 @@ app.post('/api/photo/:cedula', upload.single('image'), async (req, res) => {
       });
     }
 
-    console.log(`Usuario ${user.name} no tiene foto, generando nueva imagen con Gemini...`);
 
+    
     // Generar nueva foto usando los datos del usuario y Gemini
     const imagePath = req.file.path;
     const backgroundPath = path.join(__dirname, 'assets', 'background.png');
-    const diplomaPath = path.join(__dirname, 'assets', 'diploma.jpeg');
+    const diplomaPath = path.join(__dirname, 'assets', 'diploma.png');
 
-    // Llamar al servicio de Gemini
-    const outputBuffer = await generateGraduationImage(
+    // Llamar al servicio de Gemini (Flash para edición)
+    const outputBuffer = await generateGraduationImageFlash(
       imagePath, 
       backgroundPath,
       diplomaPath,
@@ -446,7 +445,6 @@ app.post('/api/photo/:cedula', upload.single('image'), async (req, res) => {
       data: { image: s3Key }
     });
 
-    console.log(`✓ Foto generada y guardada en S3 para ${user.name}`);
     
     // Generar URL firmada para mostrarla inmediatamente
     const signedUrl = await getSignedImageUrl(s3Key);
