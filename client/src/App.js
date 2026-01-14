@@ -418,14 +418,6 @@ function App() {
       {step === "preview" && (
         <div className="step-card fade-in">
           <h2>👀 Confirmar Foto</h2>
-          
-          <div className="instructions">
-            <p>
-              ¿Te gusta cómo quedó esta foto? Si te gusta, úsala para generar tu imagen. 
-              Si no, puedes tomarla de nuevo.
-            </p>
-          </div>
-
           <div className="video-container">
             {/* Mostramos la foto capturada o un loader */}
             {capturedPhoto ? (
