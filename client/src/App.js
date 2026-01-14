@@ -327,11 +327,6 @@ function App() {
   return (
     <div className="app-container">
       {/* Header - Solo mostrar si NO estamos en la pantalla de resultados */}
-      {step !== "result" && (
-        <div className="header">
-          <h1>📸 Generador de Fotos de Graduación</h1>
-        </div>
-      )}
 
       {/* Search Step */}
       {step === "search" && (
