@@ -284,7 +284,7 @@ app.post('/api/ced', async(req, res) => {
       return res.status(404).json({ 
         success: false, 
         exists: false,
-        error: 'Usuario no encontrado con la cédula proporcionada' 
+        error: 'Usuario no encontrado con el documento de identidad proporcionado' 
       });
     } else {
       return res.status(200).json({
@@ -385,7 +385,7 @@ app.post('/api/photo/:cedula', upload.single('image'), async (req, res) => {
     if (!user) {
       return res.status(404).json({ 
         success: false, 
-        error: 'Usuario no encontrado con la cédula proporcionada' 
+        error: 'Usuario no encontrado con la documento de identidad proporcionado' 
       });
     }
 

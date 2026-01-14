@@ -79,7 +79,7 @@ function App() {
     return { progressInterval, messageInterval };
   };
 
-  // Función para verificar si existe el usuario con la cédula
+  // Función para verificar si existe el usuario con el documento de identidad
   const verifyUser = async (cedula) => {
     try {
       const response = await axios.post(`${API_URL}/api/ced`, {
@@ -96,7 +96,7 @@ function App() {
         return {
           exists: false,
           success: false,
-          error: 'Usuario no encontrado con la cédula proporcionada'
+          error: 'Usuario no encontrado con el documento de identidad proporcionado'
         };
       }
       throw error;
@@ -106,7 +106,7 @@ function App() {
   // Función para proceder a la captura de foto
   const proceedToCapture = async () => {
     if (!cedula.trim()) {
-      setMessage("Por favor ingresa tu cédula");
+      setMessage("Por favor ingresa tu documento de identidad.");
       return;
     }
     
@@ -119,7 +119,7 @@ function App() {
       
       if (!userVerification.exists) {
         setLoading(false);
-        setMessage("Usuario no encontrado con esa cédula. Verifica que el número sea correcto.");
+        setMessage("Usuario no encontrado con ese documento de identidad. Verifica que el número sea correcto.");
         return;
       }
       
@@ -131,7 +131,7 @@ function App() {
     } catch (error) {
       console.error("Error verificando usuario:", error);
       setLoading(false);
-      setMessage("Error al verificar la cédula. Inténtalo de nuevo.");
+      setMessage("Error al verificar el documento de identidad. Inténtalo de nuevo.");
     }
   };
 
@@ -276,7 +276,7 @@ function App() {
       setStep("preview"); // Volver a preview si falla
       
       if (err.response?.status === 404) {
-        setMessage("Usuario no encontrado con esa cédula.");
+        setMessage("Usuario no encontrado con ese documento de identidad.");
       } else {
         setMessage("Error al procesar la imagen. Inténtalo de nuevo.");
       }
@@ -331,10 +331,10 @@ function App() {
       {/* Search Step */}
       {step === "search" && (
         <div className="step-card fade-in">
-          <h2>🎓 Paso 1: Ingresar Cédula</h2>
+          <h2>🎓 Paso 1: Ingresar Documento de Identidad</h2>
           <div className="search-form">
             <div className="input-group">
-              <label>Número de Cédula:</label>
+              <label>Número de Documento de Identidad:</label>
               <input
                 type="text"
                 placeholder="Ej: 1019762841"
