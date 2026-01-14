@@ -416,24 +416,26 @@ function App() {
 
       {/* Preview Step (NUEVO PASO) */}
       {step === "preview" && (
-        <div className="step-card fade-in">
-          <h2>👀 Confirmar Foto</h2>
-          <div className="video-container">
-            {/* Mostramos la foto capturada o un loader */}
-            {capturedPhoto ? (
-              <img 
-                src={capturedPhoto} 
-                alt="Captura" 
-                className="preview-image" 
-              />
-            ) : (
-              <div className="video-placeholder">
-                <p>Procesando captura...</p>
-              </div>
-            )}
+        <>
+          <div className="step-card fade-in">
+            <h2>👀 Confirmar Foto</h2>
+            <div className="video-container">
+              {/* Mostramos la foto capturada o un loader */}
+              {capturedPhoto ? (
+                <img 
+                  src={capturedPhoto} 
+                  alt="Captura" 
+                  className="preview-image" 
+                />
+              ) : (
+                <div className="video-placeholder">
+                  <p>Procesando captura...</p>
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="action-buttons">
+          <div className="action-buttons" style={{ marginTop: '1rem', borderTop: 'none' }}>
             <button 
               onClick={confirmAndSend} 
               disabled={loading || !capturedPhoto}
@@ -450,7 +452,7 @@ function App() {
               🔄 Tomar Otra
             </button>
           </div>
-        </div>
+        </>
       )}
 
       {/* Loading Step */}
