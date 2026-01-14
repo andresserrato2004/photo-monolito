@@ -330,9 +330,6 @@ function App() {
       {step !== "result" && (
         <div className="header">
           <h1>📸 Generador de Fotos de Graduación</h1>
-          <p>
-            Ingresa tu cédula y toma una foto para obtener tu imagen de graduación personalizada con inteligencia artificial
-          </p>
         </div>
       )}
 
@@ -360,12 +357,6 @@ function App() {
             </button>
           </div>
 
-          {/* Instructions */}
-          <div className="instructions">
-            <p>
-              💡 <strong>Instrucciones:</strong> Ingresa tu cédula para verificar que estés registrado en el sistema. Una vez verificado, podrás tomar una foto para generar tu imagen de graduación personalizada con IA.
-            </p>
-          </div>
 
           {/* Message Display */}
           {message && (
@@ -380,13 +371,6 @@ function App() {
       {step === "capture" && (
         <div className="step-card fade-in">
           <h2>📸 Paso 2: Tomar Foto</h2>
-          
-          <div className="instructions">
-            <p>
-              💡 <strong>Instrucciones:</strong> Asegúrate de estar bien iluminado y centrado en la cámara. 
-              Esta foto se usará para generar tu imagen de graduación profesional.
-            </p>
-          </div>
 
           <div className="video-container">
             <video 

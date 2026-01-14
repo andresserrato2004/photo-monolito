@@ -66,7 +66,7 @@ export const generateGraduationImage = async (userImagePath, backgroundPath, dip
 
       // 4. Call API
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image', 
+        model: 'gemini-3-pro-image-preview', 
         contents: contents,
         config: {
           responseModalities: ['IMAGE'], 
@@ -137,9 +137,6 @@ export const generateGraduationImageFlash = async (userImagePath, backgroundPath
            
            Output a photorealistic image with 9:16 aspect ratio.`;
 
-      // Construct contents array
-      // According to the example provided:
-      // const prompt = [{ text: "..." }, { inlineData: { ... } }];
       const contents = [
         { text: promptText },
         { 
@@ -148,7 +145,6 @@ export const generateGraduationImageFlash = async (userImagePath, backgroundPath
             data: userImageBase64 
           } 
         },
-        // We can attach other references as additional inlineData parts
         {
              inlineData: {
                  mimeType: "image/png",
@@ -165,12 +161,16 @@ export const generateGraduationImageFlash = async (userImagePath, backgroundPath
 
       // Call API with gemini-2.5-flash-image
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
+        model: 'gemini-3-pro-image-preview',
         contents: contents,
         config: {
            // Flash specific config might differ slightly, but responseModalities is key
            // If 'imageConfig' is not supported by Flash, remove it. Keeping it based on previous pattern.
-           responseModalities: ['IMAGE'], 
+           responseModalities: ['TEXT', 'IMAGE'], 
+           imageConfig: {
+              aspectRatio: '9:16', 
+              imageSize: '2K',    
+           },
         },
       });
 
@@ -178,10 +178,11 @@ export const generateGraduationImageFlash = async (userImagePath, backgroundPath
       let imageBuffer = null;
       if (response.candidates && response.candidates[0] && response.candidates[0].content && response.candidates[0].content.parts) {
         for (const part of response.candidates[0].content.parts) {
-          if (part.inlineData) {
-            imageBuffer = Buffer.from(part.inlineData.data, "base64");
-            break; 
-          }
+            if (part.text) {
+                console.log("Gemini Response Text:", part.text);
+            } else if (part.inlineData) {
+                imageBuffer = Buffer.from(part.inlineData.data, "base64");
+            }
         }
       }
 

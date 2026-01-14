@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
-import { generateGraduationImageFlash } from '../services/geminiService.js';
+import { generateGraduationImage } from '../services/geminiService.js';
 import { uploadImageToS3 } from '../services/s3Service.js';
 import 'dotenv/config';
 
@@ -48,7 +48,7 @@ async function processPhotosFlash() {
         console.log("🤖 Generating AI Image with Gemini Flash 2.5...");
         
         // 3. Generar Imagen con Flash
-        const imageBuffer = await generateGraduationImageFlash(
+        const imageBuffer = await generateGraduationImage (
           userImagePath, 
           backgroundPath, 
           diplomaPath, 
