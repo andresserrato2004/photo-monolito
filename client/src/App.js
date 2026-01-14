@@ -364,26 +364,38 @@ function App() {
 
       {/* Capture Step */}
       {step === "capture" && (
-        <div className="step-card fade-in">
-          <h2>📸 Paso 2: Tomar Foto</h2>
+        <>
+          <div className="step-card fade-in">
+            <h2>📸 Paso 2: Tomar Foto</h2>
 
-          <div className="video-container">
-            <video 
-              ref={videoRef} 
-              autoPlay 
-              playsInline
-              className="video-element mirrored" // Clase mirrored agregada
-            />
-            {!streamReady && (
-              <div className="video-placeholder">
-                <div className="icon">📹</div>
-                <p>Iniciando cámara...</p>
+            <div className="video-container">
+              <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline
+                className="video-element mirrored" // Clase mirrored agregada
+              />
+              {!streamReady && (
+                <div className="video-placeholder">
+                  <div className="icon">📹</div>
+                  <p>Iniciando cámara...</p>
+                </div>
+              )}
+              <canvas ref={canvasRef} style={{ display: "none" }} />
+            </div>
+
+            {/* Message Display inside card if desired, or move out too? 
+                User said "parte de tomar foto no y de volver no este en ese contenedor"
+                I will leave message inside.
+            */}
+            {message && (
+              <div className={getMessageClass()}>
+                {message}
               </div>
             )}
-            <canvas ref={canvasRef} style={{ display: "none" }} />
           </div>
 
-          <div className="action-buttons">
+          <div className="action-buttons" style={{ marginTop: '1rem', borderTop: 'none' }}>
             <button 
               onClick={capturePhoto} // Cambiado a capturePhoto
               disabled={!streamReady || loading}
@@ -399,14 +411,7 @@ function App() {
               ⬅️ Volver
             </button>
           </div>
-
-          {/* Message Display */}
-          {message && (
-            <div className={getMessageClass()}>
-              {message}
-            </div>
-          )}
-        </div>
+        </>
       )}
 
       {/* Preview Step (NUEVO PASO) */}
